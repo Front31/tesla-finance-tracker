@@ -1,11 +1,106 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Settings, History } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import HeroSection from '@/components/HeroSection';
+import KPICards from '@/components/KPICards';
+import PaymentDialog from '@/components/PaymentDialog';
+import PaymentHistory from '@/components/PaymentHistory';
+import FinanceSettings from '@/components/FinanceSettings';
+import MarketPriceChart from '@/components/MarketPriceChart';
+import { useFinanceData } from '@/hooks/useFinanceData';
+import { Payment } from '@/types/finance';
 
 const Index = () => {
+  const {
+    config, setConfig,
+    payments, addPayment, updatePayment, deletePayment,
+    totalPaid, remainingDebt, progressPercent,
+    vehicle, marketPrices, latestMarketPrice,
+  } = useFinanceData();
+
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [editPayment, setEditPayment] = useState<Payment | null>(null);
+
+  const handleEdit = (payment: Payment) => {
+    setEditPayment(payment);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleNewPayment = () => {
+    setEditPayment(null);
+    setPaymentDialogOpen(true);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-5xl mx-auto px-4 pb-12">
+        <HeroSection
+          totalPaid={totalPaid}
+          totalPrice={config.purchasePrice}
+          progressPercent={progressPercent}
+          remainingDebt={remainingDebt}
+        />
+
+        {/* Action Buttons */}
+        <motion.div
+          className="flex flex-wrap gap-3 justify-center mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          <Button onClick={handleNewPayment} className="gap-2">
+            <Plus size={16} /> Neue Zahlung
+          </Button>
+          <Button variant="outline" onClick={() => setSettingsOpen(true)} className="gap-2">
+            <Settings size={16} /> Finanzierung anpassen
+          </Button>
+          <Button variant="outline" onClick={() => setHistoryOpen(!historyOpen)} className="gap-2">
+            <History size={16} /> Zahlungshistorie
+          </Button>
+        </motion.div>
+
+        {/* KPI Grid */}
+        <KPICards
+          config={config}
+          totalPaid={totalPaid}
+          remainingDebt={remainingDebt}
+          vehicle={vehicle}
+          latestMarketPrice={latestMarketPrice}
+        />
+
+        {/* Market Price Chart */}
+        <div className="mt-6">
+          <MarketPriceChart data={marketPrices} />
+        </div>
+
+        {/* Payment History (toggleable) */}
+        {historyOpen && (
+          <div className="mt-6">
+            <PaymentHistory
+              payments={payments}
+              onEdit={handleEdit}
+              onDelete={deletePayment}
+            />
+          </div>
+        )}
+
+        {/* Dialogs */}
+        <PaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          onSave={addPayment}
+          editPayment={editPayment}
+          onUpdate={updatePayment}
+        />
+        <FinanceSettings
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          config={config}
+          onSave={setConfig}
+        />
       </div>
     </div>
   );
