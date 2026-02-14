@@ -14,7 +14,162 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      finance_config: {
+        Row: {
+          created_at: string
+          down_payment: number
+          duration_months: number
+          financed_amount: number
+          id: string
+          interest_rate: number
+          monthly_rate: number
+          purchase_price: number
+          start_date: string
+          updated_at: string
+          vehicle_model: string
+          vehicle_trim: string
+          vehicle_year: number
+          vin: string
+        }
+        Insert: {
+          created_at?: string
+          down_payment?: number
+          duration_months?: number
+          financed_amount?: number
+          id?: string
+          interest_rate?: number
+          monthly_rate?: number
+          purchase_price?: number
+          start_date?: string
+          updated_at?: string
+          vehicle_model?: string
+          vehicle_trim?: string
+          vehicle_year?: number
+          vin?: string
+        }
+        Update: {
+          created_at?: string
+          down_payment?: number
+          duration_months?: number
+          financed_amount?: number
+          id?: string
+          interest_rate?: number
+          monthly_rate?: number
+          purchase_price?: number
+          start_date?: string
+          updated_at?: string
+          vehicle_model?: string
+          vehicle_trim?: string
+          vehicle_year?: number
+          vin?: string
+        }
+        Relationships: []
+      }
+      market_price_daily: {
+        Row: {
+          avg_price_eur: number
+          date: string
+          fetched_at: string
+          filters_used: Json | null
+          id: string
+          max_price_eur: number
+          min_price_eur: number
+          sample_size: number
+          source: string | null
+        }
+        Insert: {
+          avg_price_eur: number
+          date: string
+          fetched_at?: string
+          filters_used?: Json | null
+          id?: string
+          max_price_eur: number
+          min_price_eur: number
+          sample_size?: number
+          source?: string | null
+        }
+        Update: {
+          avg_price_eur?: number
+          date?: string
+          fetched_at?: string
+          filters_used?: Json | null
+          id?: string
+          max_price_eur?: number
+          min_price_eur?: number
+          sample_size?: number
+          source?: string | null
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date: string
+          id?: string
+          note?: string | null
+          type?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      tesla_vehicle_state: {
+        Row: {
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          model: string
+          odometer_km: number
+          raw_json: Json | null
+          tesla_access_token: string | null
+          trim: string
+          updated_at: string
+          vin: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          model?: string
+          odometer_km?: number
+          raw_json?: Json | null
+          tesla_access_token?: string | null
+          trim?: string
+          updated_at?: string
+          vin?: string
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          model?: string
+          odometer_km?: number
+          raw_json?: Json | null
+          tesla_access_token?: string | null
+          trim?: string
+          updated_at?: string
+          vin?: string
+          year?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
