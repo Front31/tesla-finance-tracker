@@ -17,6 +17,7 @@ const Index = () => {
     payments, addPayment, updatePayment, deletePayment,
     totalPaid, remainingDebt, progressPercent,
     vehicle, marketPrices, latestMarketPrice,
+    loading, saveTeslaToken, syncTeslaVehicle, refreshMarketPrices,
   } = useFinanceData();
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -33,6 +34,14 @@ const Index = () => {
     setEditPayment(null);
     setPaymentDialogOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Laden...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -55,7 +64,7 @@ const Index = () => {
             <Plus size={16} /> Neue Zahlung
           </Button>
           <Button variant="outline" onClick={() => setSettingsOpen(true)} className="gap-2">
-            <Settings size={16} /> Finanzierung anpassen
+            <Settings size={16} /> Einstellungen
           </Button>
           <Button variant="outline" onClick={() => setHistoryOpen(!historyOpen)} className="gap-2">
             <History size={16} /> Zahlungshistorie
@@ -100,6 +109,10 @@ const Index = () => {
           onOpenChange={setSettingsOpen}
           config={config}
           onSave={setConfig}
+          vehicle={vehicle}
+          onSaveTeslaToken={saveTeslaToken}
+          onSyncTesla={syncTeslaVehicle}
+          onRefreshMarketPrices={refreshMarketPrices}
         />
       </div>
     </div>

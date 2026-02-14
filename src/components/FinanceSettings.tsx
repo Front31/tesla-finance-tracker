@@ -1,19 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FinanceConfig } from '@/types/finance';
+import { FinanceConfig, TeslaVehicleState } from '@/types/finance';
+import { Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FinanceSettingsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   config: FinanceConfig;
   onSave: (config: FinanceConfig) => void;
+  vehicle?: TeslaVehicleState | null;
+  onSaveTeslaToken?: (token: string) => Promise<void>;
+  onSyncTesla?: () => Promise<any>;
+  onRefreshMarketPrices?: () => Promise<any>;
 }
 
-export default function FinanceSettings({ open, onOpenChange, config, onSave }: FinanceSettingsProps) {
+export default function FinanceSettings({
+  open, onOpenChange, config, onSave,
+  vehicle, onSaveTeslaToken, onSyncTesla, onRefreshMarketPrices,
+}: FinanceSettingsProps) {
   const [form, setForm] = useState<FinanceConfig>(config);
+  const [teslaToken, setTeslaToken] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (open) setForm(config);
+  }, [open, config]);
 
   const update = (key: keyof FinanceConfig, value: string | number) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -26,13 +42,61 @@ export default function FinanceSettings({ open, onOpenChange, config, onSave }: 
     onOpenChange(false);
   };
 
+  const handleSaveToken = async () => {
+    if (!teslaToken.trim() || !onSaveTeslaToken) return;
+    try {
+      await onSaveTeslaToken(teslaToken.trim());
+      toast.success('Tesla Token gespeichert');
+      setTeslaToken('');
+    } catch {
+      toast.error('Fehler beim Speichern des Tokens');
+    }
+  };
+
+  const handleSync = async () => {
+    if (!onSyncTesla) return;
+    setSyncing(true);
+    try {
+      const result = await onSyncTesla();
+      if (result?.success) {
+        toast.success(`Tesla Sync erfolgreich: ${result.data.odometerKm} km`);
+      } else {
+        toast.error(result?.error || 'Tesla Sync fehlgeschlagen');
+      }
+    } catch {
+      toast.error('Tesla Sync fehlgeschlagen');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleRefreshPrices = async () => {
+    if (!onRefreshMarketPrices) return;
+    setRefreshing(true);
+    try {
+      const result = await onRefreshMarketPrices();
+      if (result?.success) {
+        toast.success(`Marktpreis aktualisiert: Ø ${result.data.avg.toLocaleString('de-DE')} €`);
+      } else {
+        toast.error(result?.error || 'Marktpreis-Update fehlgeschlagen');
+      }
+    } catch {
+      toast.error('Marktpreis-Update fehlgeschlagen');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const isConnected = !!vehicle?.lastSyncAt;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-card border-border/50 sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Finanzierung anpassen</DialogTitle>
+          <DialogTitle className="text-foreground">Einstellungen</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Finance Config */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Kaufpreis (EUR)</Label>
@@ -60,6 +124,7 @@ export default function FinanceSettings({ open, onOpenChange, config, onSave }: 
             </div>
           </div>
 
+          {/* Vehicle Data */}
           <div className="border-t border-border pt-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">Fahrzeugdaten</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -80,6 +145,53 @@ export default function FinanceSettings({ open, onOpenChange, config, onSave }: 
                 <Input value={form.vin} onChange={e => update('vin', e.target.value)} placeholder="5YJ3E7..." />
               </div>
             </div>
+          </div>
+
+          {/* Tesla API Section */}
+          <div className="border-t border-border pt-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Tesla API Verbindung</h3>
+            <div className="flex items-center gap-2 mb-3">
+              {isConnected ? (
+                <>
+                  <CheckCircle size={16} className="text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    Verbunden – Letzter Sync: {vehicle?.lastSyncAt ? new Date(vehicle.lastSyncAt).toLocaleString('de-DE') : '–'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <XCircle size={16} className="text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Nicht verbunden</span>
+                </>
+              )}
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={teslaToken}
+                  onChange={e => setTeslaToken(e.target.value)}
+                  placeholder="Tesla Access Token"
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" onClick={handleSaveToken} disabled={!teslaToken.trim()}>
+                  Speichern
+                </Button>
+              </div>
+              <Button type="button" variant="outline" onClick={handleSync} disabled={syncing} className="w-full gap-2">
+                {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                Fahrzeugdaten synchronisieren
+              </Button>
+            </div>
+          </div>
+
+          {/* Market Price Refresh */}
+          <div className="border-t border-border pt-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Marktpreis</h3>
+            <Button type="button" variant="outline" onClick={handleRefreshPrices} disabled={refreshing} className="w-full gap-2">
+              {refreshing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              Marktpreis aktualisieren
+            </Button>
           </div>
 
           <div className="flex gap-3 pt-2">
