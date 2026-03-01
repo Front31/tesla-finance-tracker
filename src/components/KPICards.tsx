@@ -9,6 +9,8 @@ interface KPICardsProps {
   vehicle: TeslaVehicleState | null;
   latestMarketPrice: MarketPriceEntry | null;
   openRatesCount: number;
+  paidRatesCount: number;
+  currentRateAmount: number;
 }
 
 const formatEUR = (v: number) =>
@@ -49,7 +51,7 @@ function KPIItem({ icon, label, value, sub, delay = 0 }: KPIItemProps) {
   );
 }
 
-export default function KPICards({ config, totalPaid, remainingDebt, vehicle, latestMarketPrice, openRatesCount }: KPICardsProps) {
+export default function KPICards({ config, totalPaid, remainingDebt, vehicle, latestMarketPrice, openRatesCount, paidRatesCount, currentRateAmount }: KPICardsProps) {
   const kpis: KPIItemProps[] = [
     {
       icon: <CreditCard size={16} />,
@@ -59,13 +61,13 @@ export default function KPICards({ config, totalPaid, remainingDebt, vehicle, la
     },
     {
       icon: <CreditCard size={16} />,
-      label: 'Summe Zahlungen',
-      value: formatEUR(totalPaid),
+      label: 'Aktuelle Rate',
+      value: formatEUR(currentRateAmount),
     },
     {
-      icon: <CreditCard size={16} />,
-      label: 'Restschuld',
-      value: formatEUR(remainingDebt),
+      icon: <Calendar size={16} />,
+      label: 'Bezahlte Raten',
+      value: `${paidRatesCount} von ${config.durationMonths}`,
     },
     {
       icon: <Calendar size={16} />,

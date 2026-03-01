@@ -31,6 +31,25 @@ const Index = () => {
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
   const openRatesCount = useMemo(() => getOpenRates(config, payments).length, [config, payments]);
 
+  const { paidRatesCount, currentRateAmount } = useMemo(() => {
+    const start = new Date(config.startDate);
+    const startMonth = start.getMonth();
+    const startYear = start.getFullYear();
+    let paid = 0;
+    for (let i = 0; i < config.durationMonths; i++) {
+      const month = (startMonth + i) % 12;
+      const year = startYear + Math.floor((startMonth + i) / 12);
+      const matching = payments.filter(p => {
+        if (p.type !== 'rate') return false;
+        const d = new Date(p.date);
+        return d.getMonth() === month && d.getFullYear() === year;
+      });
+      const paidAmount = matching.reduce((s, p) => s + p.amount, 0);
+      if (paidAmount >= config.monthlyRate * 0.5) paid++;
+    }
+    return { paidRatesCount: paid, currentRateAmount: config.monthlyRate };
+  }, [config, payments]);
+
   const handleEdit = (payment: Payment) => {
     setEditPayment(payment);
     setPaymentDialogOpen(true);
@@ -84,6 +103,8 @@ const Index = () => {
           vehicle={vehicle}
           latestMarketPrice={latestMarketPrice}
           openRatesCount={openRatesCount}
+          paidRatesCount={paidRatesCount}
+          currentRateAmount={currentRateAmount}
         />
 
         {/* Tabbed Content */}
