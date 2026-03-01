@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Settings, History } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HeroSection from '@/components/HeroSection';
 import KPICards from '@/components/KPICards';
 import PaymentDialog from '@/components/PaymentDialog';
 import PaymentHistory from '@/components/PaymentHistory';
 import FinanceSettings from '@/components/FinanceSettings';
 import MarketPriceChart from '@/components/MarketPriceChart';
+import FinancingOffers from '@/components/FinancingOffers';
+import ManualDataEntry from '@/components/ManualDataEntry';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { Payment } from '@/types/finance';
 
@@ -18,11 +21,12 @@ const Index = () => {
     totalPaid, remainingDebt, progressPercent,
     vehicle, marketPrices, latestMarketPrice,
     loading, saveTeslaToken, syncTeslaVehicle, refreshMarketPrices,
+    saveManualOdometer, saveManualMarketPrice,
+    financingOffers, addFinancingOffer, updateFinancingOffer, deleteFinancingOffer,
   } = useFinanceData();
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
 
   const handleEdit = (payment: Payment) => {
@@ -66,9 +70,6 @@ const Index = () => {
           <Button variant="outline" onClick={() => setSettingsOpen(true)} className="gap-2">
             <Settings size={16} /> Einstellungen
           </Button>
-          <Button variant="outline" onClick={() => setHistoryOpen(!historyOpen)} className="gap-2">
-            <History size={16} /> Zahlungshistorie
-          </Button>
         </motion.div>
 
         {/* KPI Grid */}
@@ -80,21 +81,46 @@ const Index = () => {
           latestMarketPrice={latestMarketPrice}
         />
 
-        {/* Market Price Chart */}
+        {/* Tabbed Content */}
         <div className="mt-6">
-          <MarketPriceChart data={marketPrices} />
-        </div>
+          <Tabs defaultValue="markt" className="w-full">
+            <TabsList className="w-full grid grid-cols-4">
+              <TabsTrigger value="markt">Marktpreis</TabsTrigger>
+              <TabsTrigger value="historie">Zahlungen</TabsTrigger>
+              <TabsTrigger value="angebote">Finanzierung</TabsTrigger>
+              <TabsTrigger value="manuell">Manuell</TabsTrigger>
+            </TabsList>
 
-        {/* Payment History (toggleable) */}
-        {historyOpen && (
-          <div className="mt-6">
-            <PaymentHistory
-              payments={payments}
-              onEdit={handleEdit}
-              onDelete={deletePayment}
-            />
-          </div>
-        )}
+            <TabsContent value="markt">
+              <MarketPriceChart data={marketPrices} />
+            </TabsContent>
+
+            <TabsContent value="historie">
+              <PaymentHistory
+                payments={payments}
+                onEdit={handleEdit}
+                onDelete={deletePayment}
+              />
+            </TabsContent>
+
+            <TabsContent value="angebote">
+              <FinancingOffers
+                offers={financingOffers}
+                onSave={addFinancingOffer}
+                onUpdate={updateFinancingOffer}
+                onDelete={deleteFinancingOffer}
+              />
+            </TabsContent>
+
+            <TabsContent value="manuell">
+              <ManualDataEntry
+                onSaveOdometer={saveManualOdometer}
+                onSaveMarketPrice={saveManualMarketPrice}
+                currentOdometer={vehicle?.odometerKm}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
 
         {/* Dialogs */}
         <PaymentDialog
