@@ -23,32 +23,6 @@ interface PaymentSegment {
   dashed?: boolean;
 }
 
-function computeExpectedRates(config: FinanceConfig, payments: Payment[]) {
-  const start = new Date(config.startDate);
-  const startMonth = start.getMonth();
-  const startYear = start.getFullYear();
-
-  const sondertilgungen = payments.filter(p => p.type === 'sondertilgung');
-  const monthIndexOf = (m: number, y: number) => (y - startYear) * 12 + (m - startMonth);
-
-  const reductions = new Array(config.durationMonths).fill(0);
-  for (const st of sondertilgungen) {
-    const pDate = new Date(st.date);
-    const stMonthIdx = monthIndexOf(pDate.getMonth(), pDate.getFullYear());
-    const firstAffected = stMonthIdx + 1;
-    const remainingCount = config.durationMonths - firstAffected;
-    if (remainingCount <= 0) continue;
-    const perMonth = st.amount / remainingCount;
-    for (let i = firstAffected; i < config.durationMonths; i++) {
-      reductions[i] += perMonth;
-    }
-  }
-
-  // Return expected rate per month
-  return Array.from({ length: config.durationMonths }, (_, i) =>
-    Math.max(0, Math.round((config.monthlyRate - reductions[i]) * 100) / 100)
-  );
-}
 
 export default function HeroSection({ totalPaid, totalPrice, progressPercent, remainingDebt, config, payments }: HeroSectionProps) {
   const segments = useMemo(() => {
@@ -59,8 +33,8 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       segs.push({ label: 'Anzahlung', amount: config.downPayment, color: 'hsl(var(--primary))' });
     }
 
-    // Build chronological segments: rate tiers interleaved with Sondertilgungen
-    const expectedRates = computeExpectedRates(config, payments);
+    // Use shared rate calculation (includes overpayment handling)
+    const { rates: allRates } = generateMonthlyRates(config, payments);
     const sondertilgungen = payments.filter(p => p.type === 'sondertilgung').sort((a, b) => a.date.localeCompare(b.date));
 
     const start = new Date(config.startDate);
@@ -75,6 +49,14 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       sonderByMonth.set(idx, (sonderByMonth.get(idx) || 0) + st.amount);
     }
 
+    // Map overpayments to their month index
+    const overpaymentByMonth = new Map<number, number>();
+    for (let i = 0; i < allRates.length; i++) {
+      if (allRates[i].overpayment > 0) {
+        overpaymentByMonth.set(i, allRates[i].overpayment);
+      }
+    }
+
     const rateColors = [
       'hsl(var(--chart-1, 220 70% 50%))',
       'hsl(var(--chart-2, 160 60% 45%))',
@@ -83,16 +65,15 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     ];
     let colorIdx = 0;
 
-    // Only count months that have been paid using shared rate calculation
+    // Paid months
     const paidMonths = new Set<number>();
-    const { rates: allRates } = generateMonthlyRates(config, payments);
     for (let i = 0; i < allRates.length; i++) {
       if (allRates[i].isPaid || allRates[i].paidAmount > 0) {
         paidMonths.add(i);
       }
     }
 
-    // Walk through paid months only, grouping consecutive same-rate months, inserting Sondertilgungen chronologically
+    // Walk through months, grouping consecutive same-rate months
     let currentRate = -1;
     let currentCount = 0;
 
@@ -111,11 +92,9 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     for (let i = 0; i < config.durationMonths; i++) {
       // Insert Sondertilgung at its chronological position
       if (sonderByMonth.has(i)) {
-        if (currentCount > 0) {
-          flushRateTier();
-        }
+        if (currentCount > 0) flushRateTier();
         segs.push({
-          label: `Sondertilgung`,
+          label: 'Sondertilgung',
           amount: sonderByMonth.get(i)!,
           color: 'hsl(var(--accent))',
         });
@@ -124,12 +103,23 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       // Only include this month if it was actually paid
       if (!paidMonths.has(i)) continue;
 
-      const rounded = Math.round(expectedRates[i]);
+      // Use expected amount from shared calculation (includes overpayment reductions)
+      const rounded = Math.round(allRates[i].expectedAmount);
       if (rounded !== currentRate && currentCount > 0) {
         flushRateTier();
       }
       currentRate = rounded;
       currentCount++;
+
+      // Insert overpayment as Sondertilgung segment after the rate
+      if (overpaymentByMonth.has(i)) {
+        flushRateTier();
+        segs.push({
+          label: 'Überzahlung → Sondertilgung',
+          amount: overpaymentByMonth.get(i)!,
+          color: 'hsl(var(--primary))',
+        });
+      }
     }
     flushRateTier();
 
