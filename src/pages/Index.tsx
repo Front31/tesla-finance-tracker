@@ -8,7 +8,7 @@ import KPICards from '@/components/KPICards';
 import PaymentDialog from '@/components/PaymentDialog';
 import PaymentHistory from '@/components/PaymentHistory';
 import FinanceSettings from '@/components/FinanceSettings';
-import MarketPriceChart from '@/components/MarketPriceChart';
+import MonthlyRateOverview from '@/components/MonthlyRateOverview';
 import FinancingOffers from '@/components/FinancingOffers';
 import ManualDataEntry from '@/components/ManualDataEntry';
 import { useFinanceData } from '@/hooks/useFinanceData';
@@ -83,16 +83,16 @@ const Index = () => {
 
         {/* Tabbed Content */}
         <div className="mt-6">
-          <Tabs defaultValue="markt" className="w-full">
+          <Tabs defaultValue="raten" className="w-full">
             <TabsList className="w-full grid grid-cols-4">
-              <TabsTrigger value="markt">Marktpreis</TabsTrigger>
+              <TabsTrigger value="raten">Ratenübersicht</TabsTrigger>
               <TabsTrigger value="historie">Zahlungen</TabsTrigger>
               <TabsTrigger value="angebote">Finanzierung</TabsTrigger>
               <TabsTrigger value="manuell">Manuell</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="markt">
-              <MarketPriceChart data={marketPrices} />
+            <TabsContent value="raten">
+              <MonthlyRateOverview config={config} payments={payments} />
             </TabsContent>
 
             <TabsContent value="historie">
@@ -129,6 +129,8 @@ const Index = () => {
           onSave={addPayment}
           editPayment={editPayment}
           onUpdate={updatePayment}
+          config={config}
+          payments={payments}
         />
         <FinanceSettings
           open={settingsOpen}
