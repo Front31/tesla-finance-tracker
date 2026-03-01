@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FinanceConfig, Payment, TeslaVehicleState, MarketPriceEntry, FinancingOffer, DEFAULT_FINANCE_CONFIG } from '@/types/finance';
+import { FinanceConfig, Payment, TeslaVehicleState, MarketPriceEntry, FinancingOffer, DEFAULT_FINANCE_CONFIG, EMPTY_FINANCE_CONFIG } from '@/types/finance';
 
 export function useFinanceData() {
   const [config, setConfigState] = useState<FinanceConfig>(DEFAULT_FINANCE_CONFIG);
@@ -227,7 +227,7 @@ export function useFinanceData() {
     setFinancingOffers([]);
     setMarketPrices([]);
     setVehicle(null);
-    setConfigState(DEFAULT_FINANCE_CONFIG);
+    setConfigState(EMPTY_FINANCE_CONFIG);
   }, []);
 
   return {
