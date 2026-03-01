@@ -193,32 +193,37 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
         </div>
 
         {/* Segmented progress bar */}
-        <div className="relative h-3 rounded-full bg-secondary overflow-hidden flex">
-          {segments.map((seg, i) => {
-            const widthPercent = barBase > 0 ? (seg.amount / barBase) * 100 : 0;
-            if (seg.dashed) {
+        <div className="relative h-3 rounded-full bg-secondary overflow-hidden">
+          {/* Regular segments from left */}
+          <div className="absolute inset-0 flex">
+            {segments.filter(s => !s.dashed).map((seg, i) => {
+              const widthPercent = barBase > 0 ? (seg.amount / barBase) * 100 : 0;
               return (
                 <motion.div
                   key={seg.label}
                   className="h-full"
-                  style={{
-                    backgroundImage: `repeating-linear-gradient(90deg, hsl(0 72% 51%) 0px, hsl(0 72% 51%) 4px, transparent 4px, transparent 8px)`,
-                    opacity: 0.6,
-                  }}
+                  style={{ backgroundColor: seg.color }}
                   initial={{ width: 0 }}
                   animate={{ width: `${widthPercent}%` }}
                   transition={{ duration: 1.2, delay: 0.8 + i * 0.1, ease: 'easeOut' }}
                 />
               );
-            }
+            })}
+          </div>
+          {/* Schlussrate anchored to right end */}
+          {segments.filter(s => s.dashed).map(seg => {
+            const widthPercent = barBase > 0 ? (seg.amount / barBase) * 100 : 0;
             return (
               <motion.div
                 key={seg.label}
-                className="h-full"
-                style={{ backgroundColor: seg.color }}
+                className="absolute right-0 top-0 h-full"
+                style={{
+                  backgroundImage: `repeating-linear-gradient(90deg, hsl(0 72% 51%) 0px, hsl(0 72% 51%) 4px, transparent 4px, transparent 8px)`,
+                  opacity: 0.6,
+                }}
                 initial={{ width: 0 }}
                 animate={{ width: `${widthPercent}%` }}
-                transition={{ duration: 1.2, delay: 0.8 + i * 0.1, ease: 'easeOut' }}
+                transition={{ duration: 1.2, delay: 1.2, ease: 'easeOut' }}
               />
             );
           })}
