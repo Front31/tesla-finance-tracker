@@ -39,8 +39,20 @@ function Row({ label, value, bold, muted, indent }: RowProps) {
   );
 }
 
+const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+interface SondertilgungEffect {
+  date: string;
+  amount: number;
+  rateBefore: number;
+  rateAfter: number;
+  remainingMonths: number;
+  reductionPerMonth: number;
+}
+
 export default function CalculationOverview({ config, payments, totalPaid, remainingDebt, currentRateAmount, paidRatesCount }: CalculationOverviewProps) {
-  const calc = useMemo(() => {
+  const { calc, sondertilgungEffects } = useMemo(() => {
     const financedAmount = config.purchasePrice - config.downPayment;
     const totalRatePayments = payments.filter(p => p.type === 'rate').reduce((s, p) => s + p.amount, 0);
     const totalSondertilgungen = payments.filter(p => p.type === 'sondertilgung').reduce((s, p) => s + p.amount, 0);
@@ -51,16 +63,41 @@ export default function CalculationOverview({ config, payments, totalPaid, remai
     const totalProjectedCost = totalPaid + projectedRemainingCost;
     const interestEstimate = totalProjectedCost - config.purchasePrice;
 
+    // Compute Sondertilgung effects
+    const start = new Date(config.startDate);
+    const startMonth = start.getMonth();
+    const startYear = start.getFullYear();
+    const sondertilgungen = payments
+      .filter(p => p.type === 'sondertilgung')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const effects: SondertilgungEffect[] = [];
+    let cumulativeReduction = 0;
+
+    for (const st of sondertilgungen) {
+      const pDate = new Date(st.date);
+      const stMonthIdx = (pDate.getFullYear() - startYear) * 12 + (pDate.getMonth() - startMonth);
+      const remainingCount = config.durationMonths - (stMonthIdx + 1);
+      if (remainingCount <= 0) continue;
+
+      const rateBefore = Math.max(0, Math.round((config.monthlyRate - cumulativeReduction) * 100) / 100);
+      const reductionPerMonth = st.amount / remainingCount;
+      cumulativeReduction += reductionPerMonth;
+      const rateAfter = Math.max(0, Math.round((config.monthlyRate - cumulativeReduction) * 100) / 100);
+
+      effects.push({
+        date: st.date,
+        amount: st.amount,
+        rateBefore,
+        rateAfter,
+        remainingMonths: remainingCount,
+        reductionPerMonth,
+      });
+    }
+
     return {
-      financedAmount,
-      totalRatePayments,
-      totalSondertilgungen,
-      totalFees,
-      totalOther,
-      remainingRates,
-      projectedRemainingCost,
-      totalProjectedCost,
-      interestEstimate,
+      calc: { financedAmount, totalRatePayments, totalSondertilgungen, totalFees, totalOther, remainingRates, projectedRemainingCost, totalProjectedCost, interestEstimate },
+      sondertilgungEffects: effects,
     };
   }, [config, payments, totalPaid, currentRateAmount, paidRatesCount]);
 
@@ -87,6 +124,40 @@ export default function CalculationOverview({ config, payments, totalPaid, remai
         )}
 
         <Separator className="my-3" />
+
+        {/* Sondertilgung effects */}
+        {sondertilgungEffects.length > 0 && (
+          <>
+            <Row label="Auswirkungen der Sondertilgungen" value="" bold />
+            {sondertilgungEffects.map((effect, i) => (
+              <div key={i} className="pl-4 py-2 border-l-2 border-primary/30 ml-1 mb-2 space-y-0.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-foreground">
+                    Sondertilgung am {fmtDate(effect.date)}
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                    {fmt(effect.amount)}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <div className="flex justify-between">
+                    <span>Verbleibende Raten zum Zeitpunkt</span>
+                    <span className="tabular-nums">{effect.remainingMonths} Monate</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Reduktion pro Monat</span>
+                    <span className="tabular-nums">– {fmt(effect.reductionPerMonth)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rate vorher → nachher</span>
+                    <span className="tabular-nums">{fmt(effect.rateBefore)} → {fmt(effect.rateAfter)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Separator className="my-3" />
+          </>
+        )}
 
         {/* Payment status */}
         <Row label="Bezahlte Raten" value={`${paidRatesCount} von ${config.durationMonths}`} bold />
