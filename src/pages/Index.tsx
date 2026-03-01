@@ -35,7 +35,25 @@ const Index = () => {
     const start = new Date(config.startDate);
     const startMonth = start.getMonth();
     const startYear = start.getFullYear();
+    const now = new Date();
+    const nowIdx = (now.getFullYear() - startYear) * 12 + (now.getMonth() - startMonth);
+
+    // Compute reductions from Sondertilgungen
+    const sondertilgungen = payments.filter(p => p.type === 'sondertilgung');
+    const reductions = new Array(config.durationMonths).fill(0);
+    for (const st of sondertilgungen) {
+      const d = new Date(st.date);
+      const stIdx = (d.getFullYear() - startYear) * 12 + (d.getMonth() - startMonth);
+      const firstAffected = stIdx + 1;
+      const remaining = config.durationMonths - firstAffected;
+      if (remaining <= 0) continue;
+      const perMonth = st.amount / remaining;
+      for (let i = firstAffected; i < config.durationMonths; i++) reductions[i] += perMonth;
+    }
+
+    // Find next unpaid rate index for current rate amount
     let paid = 0;
+    let nextRateAmount = config.monthlyRate;
     for (let i = 0; i < config.durationMonths; i++) {
       const month = (startMonth + i) % 12;
       const year = startYear + Math.floor((startMonth + i) / 12);
@@ -44,10 +62,16 @@ const Index = () => {
         const d = new Date(p.date);
         return d.getMonth() === month && d.getFullYear() === year;
       });
-      const paidAmount = matching.reduce((s, p) => s + p.amount, 0);
-      if (paidAmount >= config.monthlyRate * 0.5) paid++;
+      const paidAmt = matching.reduce((s, p) => s + p.amount, 0);
+      const expected = Math.max(0, Math.round((config.monthlyRate - reductions[i]) * 100) / 100);
+      if (paidAmt >= expected * 0.5) {
+        paid++;
+      } else if (i >= nowIdx) {
+        nextRateAmount = expected;
+        break;
+      }
     }
-    return { paidRatesCount: paid, currentRateAmount: config.monthlyRate };
+    return { paidRatesCount: paid, currentRateAmount: nextRateAmount };
   }, [config, payments]);
 
   const handleEdit = (payment: Payment) => {
