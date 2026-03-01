@@ -71,13 +71,12 @@ function generateMonthlyRates(config: FinanceConfig, payments: Payment[]): Month
     // Match by note label first (handles early payments), then fall back to date
     const matchingPayments = payments.filter(p => {
       if (p.type !== 'rate') return false;
-      // Check if note matches this rate's label (e.g. "Rate 04/25")
-      if (p.note && p.note === label) return true;
+      // Check if note contains this rate's label (e.g. "Rate 04/25")
+      if (p.note && p.note.includes(label)) return true;
       // Fallback: match by payment date month/year (only if not claimed by another rate via note)
       const pDate = new Date(p.date);
       if (pDate.getMonth() === month && pDate.getFullYear() === year) {
-        // Only match by date if this payment doesn't have a note pointing to a different rate
-        if (!p.note || !p.note.startsWith('Rate ')) return true;
+        if (!p.note || !p.note.includes('Rate ')) return true;
       }
       return false;
     });
