@@ -57,6 +57,8 @@ const Index = () => {
           totalPrice={config.purchasePrice}
           progressPercent={progressPercent}
           remainingDebt={remainingDebt}
+          config={config}
+          payments={payments}
         />
 
         {/* Action Buttons */}
