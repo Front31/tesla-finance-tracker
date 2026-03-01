@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
+import { ArrowDownRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { FinanceConfig, Payment } from '@/types/finance';
+import { generateMonthlyRates } from '@/lib/rateCalculation';
 
 interface CalculationOverviewProps {
   config: FinanceConfig;
@@ -49,6 +52,8 @@ interface SondertilgungEffect {
   rateAfter: number;
   remainingMonths: number;
   reductionPerMonth: number;
+  isOverpayment?: boolean;
+  rateLabel?: string;
 }
 
 export default function CalculationOverview({ config, payments, totalPaid, remainingDebt, currentRateAmount, paidRatesCount }: CalculationOverviewProps) {
@@ -63,7 +68,7 @@ export default function CalculationOverview({ config, payments, totalPaid, remai
     const totalProjectedCost = totalPaid + projectedRemainingCost;
     const interestEstimate = totalProjectedCost - config.purchasePrice;
 
-    // Compute Sondertilgung effects
+    // Compute explicit Sondertilgung effects
     const start = new Date(config.startDate);
     const startMonth = start.getMonth();
     const startYear = start.getFullYear();
@@ -95,8 +100,29 @@ export default function CalculationOverview({ config, payments, totalPaid, remai
       });
     }
 
+    // Add overpayment effects from rate calculation
+    const { overpaymentEffects } = generateMonthlyRates(config, payments);
+    for (const oe of overpaymentEffects) {
+      effects.push({
+        date: oe.date,
+        amount: oe.overpaymentAmount,
+        rateBefore: oe.rateBefore,
+        rateAfter: oe.rateAfter,
+        remainingMonths: oe.remainingMonths,
+        reductionPerMonth: oe.reductionPerMonth,
+        isOverpayment: true,
+        rateLabel: oe.rateLabel,
+      });
+    }
+
+    // Sort all effects by date
+    effects.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // Compute total overpayments for display
+    const totalOverpayments = overpaymentEffects.reduce((s, e) => s + e.overpaymentAmount, 0);
+
     return {
-      calc: { financedAmount, totalRatePayments, totalSondertilgungen, totalFees, totalOther, remainingRates, projectedRemainingCost, totalProjectedCost, interestEstimate },
+      calc: { financedAmount, totalRatePayments, totalSondertilgungen, totalFees, totalOther, remainingRates, projectedRemainingCost, totalProjectedCost, interestEstimate, totalOverpayments },
       sondertilgungEffects: effects,
     };
   }, [config, payments, totalPaid, currentRateAmount, paidRatesCount]);
@@ -125,19 +151,33 @@ export default function CalculationOverview({ config, payments, totalPaid, remai
 
         <Separator className="my-3" />
 
-        {/* Sondertilgung effects */}
+        {/* Sondertilgung effects (explicit + overpayments) */}
         {sondertilgungEffects.length > 0 && (
           <>
-            <Row label="Auswirkungen der Sondertilgungen" value="" bold />
+            <Row label="Auswirkungen auf die Rate" value="" bold />
             {sondertilgungEffects.map((effect, i) => (
-              <div key={i} className="pl-4 py-2 border-l-2 border-primary/30 ml-1 mb-2 space-y-0.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-foreground">
-                    Sondertilgung am {fmtDate(effect.date)}
+              <div key={i} className={`pl-4 py-2 border-l-2 ${effect.isOverpayment ? 'border-primary/50' : 'border-primary/30'} ml-1 mb-2 space-y-0.5`}>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    {effect.isOverpayment ? (
+                      <>
+                        <ArrowDownRight size={14} className="text-primary shrink-0" />
+                        Überzahlung {effect.rateLabel}
+                      </>
+                    ) : (
+                      `Sondertilgung am ${fmtDate(effect.date)}`
+                    )}
                   </span>
-                  <span className="text-sm font-semibold tabular-nums text-foreground">
-                    {fmt(effect.amount)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {effect.isOverpayment && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/50 text-primary">
+                        → Sondertilgung
+                      </Badge>
+                    )}
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
+                      {fmt(effect.amount)}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                   <div className="flex justify-between">
@@ -170,6 +210,9 @@ export default function CalculationOverview({ config, payments, totalPaid, remai
         <Row label="Ratenzahlungen" value={fmt(calc.totalRatePayments)} indent />
         {calc.totalSondertilgungen > 0 && (
           <Row label="Sondertilgungen" value={fmt(calc.totalSondertilgungen)} indent />
+        )}
+        {calc.totalOverpayments > 0 && (
+          <Row label="Überzahlungen (→ Sondertilgung)" value={fmt(calc.totalOverpayments)} indent />
         )}
         {calc.totalFees > 0 && (
           <Row label="Gebühren" value={fmt(calc.totalFees)} indent muted />

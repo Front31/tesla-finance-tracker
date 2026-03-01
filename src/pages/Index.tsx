@@ -14,7 +14,7 @@ import FinancingOffers from '@/components/FinancingOffers';
 import CalculationOverview from '@/components/CalculationOverview';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { Payment } from '@/types/finance';
-import { getOpenRates } from '@/components/MonthlyRateOverview';
+import { getOpenRates, generateMonthlyRates, getOverpaymentsByPaymentId, matchesRate } from '@/lib/rateCalculation';
 
 const Index = () => {
   const {
@@ -34,54 +34,28 @@ const Index = () => {
   const openRatesCount = useMemo(() => getOpenRates(config, payments).length, [config, payments]);
 
   const { paidRatesCount, currentRateAmount } = useMemo(() => {
+    const { rates } = generateMonthlyRates(config, payments);
+    const now = new Date();
     const start = new Date(config.startDate);
     const startMonth = start.getMonth();
     const startYear = start.getFullYear();
-    const now = new Date();
     const nowIdx = (now.getFullYear() - startYear) * 12 + (now.getMonth() - startMonth);
 
-    // Compute reductions from Sondertilgungen
-    const sondertilgungen = payments.filter(p => p.type === 'sondertilgung');
-    const reductions = new Array(config.durationMonths).fill(0);
-    for (const st of sondertilgungen) {
-      const d = new Date(st.date);
-      const stIdx = (d.getFullYear() - startYear) * 12 + (d.getMonth() - startMonth);
-      const firstAffected = stIdx + 1;
-      const remaining = config.durationMonths - firstAffected;
-      if (remaining <= 0) continue;
-      const perMonth = st.amount / remaining;
-      for (let i = firstAffected; i < config.durationMonths; i++) reductions[i] += perMonth;
-    }
-
-    // Find next unpaid rate index for current rate amount
     let paid = 0;
     let nextRateAmount = config.monthlyRate;
-    for (let i = 0; i < config.durationMonths; i++) {
-      const month = (startMonth + i) % 12;
-      const year = startYear + Math.floor((startMonth + i) / 12);
-      const label = `Rate ${String(month + 1).padStart(2, '0')}/${String(year).slice(-2)}`;
-      const matching = payments.filter(p => {
-        if (p.type !== 'rate') return false;
-        // Match by note containing rate label (handles early payments)
-        if (p.note && p.note.includes(label)) return true;
-        // Fallback: match by date if no rate-note
-        const d = new Date(p.date);
-        if (d.getMonth() === month && d.getFullYear() === year) {
-          if (!p.note || !p.note.includes('Rate ')) return true;
-        }
-        return false;
-      });
-      const paidAmt = matching.reduce((s, p) => s + p.amount, 0);
-      const expected = Math.max(0, Math.round((config.monthlyRate - reductions[i]) * 100) / 100);
-      if (paidAmt >= expected * 0.5) {
+    for (let i = 0; i < rates.length; i++) {
+      const r = rates[i];
+      if (r.isPaid || r.paidAmount >= r.expectedAmount * 0.5) {
         paid++;
       } else if (i >= nowIdx) {
-        nextRateAmount = expected;
+        nextRateAmount = r.expectedAmount;
         break;
       }
     }
     return { paidRatesCount: paid, currentRateAmount: nextRateAmount };
   }, [config, payments]);
+
+  const overpaymentMap = useMemo(() => getOverpaymentsByPaymentId(config, payments), [config, payments]);
 
   const handleEdit = (payment: Payment) => {
     setEditPayment(payment);
@@ -165,6 +139,7 @@ const Index = () => {
                 payments={payments}
                 onEdit={handleEdit}
                 onDelete={deletePayment}
+                overpaymentMap={overpaymentMap}
               />
             </TabsContent>
 

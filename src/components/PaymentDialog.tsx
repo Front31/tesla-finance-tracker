@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Payment, FinanceConfig, PAYMENT_TYPE_LABELS } from '@/types/finance';
-import { getOpenRates } from '@/components/MonthlyRateOverview';
+import { getOpenRates } from '@/lib/rateCalculation';
 
 interface PaymentDialogProps {
   open: boolean;

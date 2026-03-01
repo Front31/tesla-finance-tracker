@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, ArrowDownRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Payment, PAYMENT_TYPE_LABELS } from '@/types/finance';
 
 interface PaymentHistoryProps {
   payments: Payment[];
   onEdit: (payment: Payment) => void;
   onDelete: (id: string) => void;
+  overpaymentMap?: Map<string, number>;
 }
 
 const formatEUR = (v: number) =>
@@ -18,7 +20,7 @@ const formatEUR = (v: number) =>
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-export default function PaymentHistory({ payments, onEdit, onDelete }: PaymentHistoryProps) {
+export default function PaymentHistory({ payments, onEdit, onDelete, overpaymentMap }: PaymentHistoryProps) {
   const [filterType, setFilterType] = useState<string>('all');
 
   const filtered = payments
@@ -52,53 +54,62 @@ export default function PaymentHistory({ payments, onEdit, onDelete }: PaymentHi
       ) : (
         <div className="space-y-2">
           <AnimatePresence mode="popLayout">
-            {filtered.map(payment => (
-              <motion.div
-                key={payment.id}
-                layout
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">{formatEUR(payment.amount)}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-foreground font-medium">
-                      {PAYMENT_TYPE_LABELS[payment.type]}
-                    </span>
+            {filtered.map(payment => {
+              const overpayment = overpaymentMap?.get(payment.id);
+              return (
+                <motion.div
+                  key={payment.id}
+                  layout
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex items-center justify-between p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-foreground">{formatEUR(payment.amount)}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-foreground font-medium">
+                        {PAYMENT_TYPE_LABELS[payment.type]}
+                      </span>
+                      {overpayment && overpayment > 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/50 text-primary gap-0.5">
+                          <ArrowDownRight size={10} />
+                          {formatEUR(overpayment)} → Sondertilgung
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {formatDate(payment.date)}
+                      {payment.note && ` · ${payment.note}`}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {formatDate(payment.date)}
-                    {payment.note && ` · ${payment.note}`}
+                  <div className="flex gap-1 ml-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(payment)}>
+                      <Pencil size={14} />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 size={14} />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Zahlung löschen?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {formatEUR(payment.amount)} vom {formatDate(payment.date)} wird gelöscht.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onDelete(payment.id)}>Löschen</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                </div>
-                <div className="flex gap-1 ml-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(payment)}>
-                    <Pencil size={14} />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                        <Trash2 size={14} />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Zahlung löschen?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {formatEUR(payment.amount)} vom {formatDate(payment.date)} wird gelöscht.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => onDelete(payment.id)}>Löschen</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
