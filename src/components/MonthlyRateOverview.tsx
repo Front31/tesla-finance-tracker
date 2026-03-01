@@ -21,13 +21,11 @@ export default function MonthlyRateOverview({ config, payments }: MonthlyRateOve
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const nextMonth = (currentMonth + 1) % 12;
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    const futureLimit = new Date(currentYear, currentMonth + 5, 1);
 
     const filtered = all.filter(r => {
-      const isPastOrCurrent = r.year < currentYear || (r.year === currentYear && r.month <= currentMonth);
-      const isNextMonth = r.year === nextYear && r.month === nextMonth;
-      return isPastOrCurrent || isNextMonth;
+      const rateDate = new Date(r.year, r.month, 1);
+      return rateDate <= futureLimit;
     });
 
     // Add Schlussrate if configured
