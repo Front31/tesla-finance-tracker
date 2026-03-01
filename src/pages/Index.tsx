@@ -59,10 +59,17 @@ const Index = () => {
     for (let i = 0; i < config.durationMonths; i++) {
       const month = (startMonth + i) % 12;
       const year = startYear + Math.floor((startMonth + i) / 12);
+      const label = `Rate ${String(month + 1).padStart(2, '0')}/${String(year).slice(-2)}`;
       const matching = payments.filter(p => {
         if (p.type !== 'rate') return false;
+        // Match by note containing rate label (handles early payments)
+        if (p.note && p.note.includes(label)) return true;
+        // Fallback: match by date if no rate-note
         const d = new Date(p.date);
-        return d.getMonth() === month && d.getFullYear() === year;
+        if (d.getMonth() === month && d.getFullYear() === year) {
+          if (!p.note || !p.note.includes('Rate ')) return true;
+        }
+        return false;
       });
       const paidAmt = matching.reduce((s, p) => s + p.amount, 0);
       const expected = Math.max(0, Math.round((config.monthlyRate - reductions[i]) * 100) / 100);
