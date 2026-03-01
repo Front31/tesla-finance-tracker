@@ -100,10 +100,13 @@ export function getOpenRates(config: FinanceConfig, payments: Payment[]): Monthl
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+  const nextMonth = (currentMonth + 1) % 12;
+  const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
 
   return rates.filter(r => {
     const isPastOrCurrent = r.year < currentYear || (r.year === currentYear && r.month <= currentMonth);
-    return isPastOrCurrent && !r.isPaid;
+    const isNextMonth = r.year === nextYear && r.month === nextMonth;
+    return (isPastOrCurrent || isNextMonth) && !r.isPaid;
   });
 }
 
