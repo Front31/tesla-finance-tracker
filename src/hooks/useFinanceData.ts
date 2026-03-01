@@ -217,6 +217,19 @@ export function useFinanceData() {
 
   const latestMarketPrice = marketPrices[marketPrices.length - 1] ?? null;
 
+  const resetAllData = useCallback(async () => {
+    await supabase.from('payments').delete().neq('id', '');
+    await supabase.from('financing_offers').delete().neq('id', '');
+    await supabase.from('market_price_daily').delete().neq('id', '');
+    await supabase.from('tesla_vehicle_state').delete().neq('id', '');
+    await supabase.from('finance_config').delete().neq('id', '');
+    setPaymentsState([]);
+    setFinancingOffers([]);
+    setMarketPrices([]);
+    setVehicle(null);
+    setConfigState(DEFAULT_FINANCE_CONFIG);
+  }, []);
+
   return {
     config, setConfig,
     payments, addPayment, updatePayment, deletePayment,
@@ -225,5 +238,6 @@ export function useFinanceData() {
     loading, saveTeslaToken, syncTeslaVehicle, refreshMarketPrices,
     saveManualOdometer, saveManualMarketPrice,
     financingOffers, addFinancingOffer, updateFinancingOffer, deleteFinancingOffer,
+    resetAllData,
   };
 }
