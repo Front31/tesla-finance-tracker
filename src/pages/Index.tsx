@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import FinancingOffers from '@/components/FinancingOffers';
 import ManualDataEntry from '@/components/ManualDataEntry';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { Payment } from '@/types/finance';
+import { getOpenRates } from '@/components/MonthlyRateOverview';
 
 const Index = () => {
   const {
@@ -28,6 +29,7 @@ const Index = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
+  const openRatesCount = useMemo(() => getOpenRates(config, payments).length, [config, payments]);
 
   const handleEdit = (payment: Payment) => {
     setEditPayment(payment);
@@ -79,6 +81,7 @@ const Index = () => {
           remainingDebt={remainingDebt}
           vehicle={vehicle}
           latestMarketPrice={latestMarketPrice}
+          openRatesCount={openRatesCount}
         />
 
         {/* Tabbed Content */}
