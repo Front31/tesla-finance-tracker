@@ -23,9 +23,12 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<Payment['type']>('rate');
   const [note, setNote] = useState('');
-  const [selectedRate, setSelectedRate] = useState<string>('');
+  const [selectedOption, setSelectedOption] = useState<string>('');
 
   const openRates = useMemo(() => getOpenRates(config, payments), [config, payments]);
+
+  const formatEUR = (v: number) =>
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v);
 
   useEffect(() => {
     if (editPayment) {
@@ -33,32 +36,35 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
       setAmount(editPayment.amount.toString());
       setType(editPayment.type);
       setNote(editPayment.note || '');
-      setSelectedRate('');
+      setSelectedOption('edit');
     } else {
       setDate(new Date().toISOString().split('T')[0]);
       setAmount('');
       setType('rate');
       setNote('');
-      // Auto-select newest open rate
+      // Auto-select first open rate
       if (openRates.length > 0) {
-        setSelectedRate(openRates[0].key);
+        handleOptionSelect(openRates[0].key);
       } else {
-        setSelectedRate('');
+        setSelectedOption('sondertilgung');
       }
     }
-  }, [editPayment, open, openRates]);
+  }, [editPayment, open]);
 
-  const handleRateSelect = (rateKey: string) => {
-    setSelectedRate(rateKey);
-    const rate = openRates.find(r => r.key === rateKey);
+  const handleOptionSelect = (value: string) => {
+    setSelectedOption(value);
+    const rate = openRates.find(r => r.key === value);
     if (rate) {
-      // Set date to 1st of that month
       setDate(`${rate.year}-${String(rate.month + 1).padStart(2, '0')}-01`);
-      // Pre-fill remaining amount
       const remaining = rate.expectedAmount - rate.paidAmount;
       setAmount(remaining.toFixed(2));
       setNote(rate.label);
       setType('rate');
+    } else {
+      // Non-rate type selected
+      setType(value as Payment['type']);
+      setAmount('');
+      setNote('');
     }
   };
 
@@ -75,6 +81,8 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
     onOpenChange(false);
   };
 
+  const nonRateTypes = Object.entries(PAYMENT_TYPE_LABELS).filter(([key]) => key !== 'rate');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-card border-border/50 sm:max-w-md">
@@ -84,25 +92,31 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Open rates quick-select (only for new payments) */}
-          {!editPayment && openRates.length > 0 && (
+          {/* Combined type/rate selector (only for new payments) */}
+          {!editPayment && (
             <div className="space-y-2">
-              <Label>Offene Rate auswählen</Label>
-              <Select value={selectedRate} onValueChange={handleRateSelect}>
+              <Label>Was möchtest du eintragen?</Label>
+              <Select value={selectedOption} onValueChange={handleOptionSelect}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Rate wählen..." />
+                  <SelectValue placeholder="Auswählen..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {openRates.map(r => (
-                    <SelectItem key={r.key} value={r.key}>
-                      {r.label} — noch {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(r.expectedAmount - r.paidAmount)} offen
-                    </SelectItem>
+                  {openRates.length > 0 && (
+                    <>
+                      {openRates.map(r => (
+                        <SelectItem key={r.key} value={r.key}>
+                          {r.label} — {formatEUR(r.expectedAmount - r.paidAmount)} offen
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {nonRateTypes.map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
-
           <div className="space-y-2">
             <Label htmlFor="date">Datum</Label>
             <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -119,19 +133,21 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
               onChange={e => setAmount(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label>Typ</Label>
-            <Select value={type} onValueChange={(v) => setType(v as Payment['type'])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {editPayment && (
+            <div className="space-y-2">
+              <Label>Typ</Label>
+              <Select value={type} onValueChange={(v) => setType(v as Payment['type'])}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="note">Notiz (optional)</Label>
             <Textarea
