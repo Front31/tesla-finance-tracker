@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { exportToCSV } from '@/lib/exportData';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HeroSection from '@/components/HeroSection';
 import KPICards from '@/components/KPICards';
@@ -117,6 +118,12 @@ const Index = () => {
           </Button>
           <Button variant="outline" onClick={() => setSettingsOpen(true)} className="gap-2">
             <Settings size={16} /> Einstellungen
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => exportToCSV({
+            config, payments, totalPaid, remainingDebt, currentRateAmount, paidRatesCount,
+            vehicle, latestMarketPrice, financingOffers,
+          })}>
+            <Download size={16} /> Export
           </Button>
         </motion.div>
 
