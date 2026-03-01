@@ -58,24 +58,20 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       segs.push({ label: 'Anzahlung', amount: config.downPayment, color: 'hsl(var(--primary))' });
     }
 
-    // 2. Sondertilgungen
-    const sondertilgungen = payments.filter(p => p.type === 'sondertilgung');
-    const sonderSum = sondertilgungen.reduce((s, p) => s + p.amount, 0);
-    if (sonderSum > 0) {
-      segs.push({ label: 'Sondertilgungen', amount: sonderSum, color: 'hsl(var(--accent))' });
-    }
-
-    // 3. Raten grouped by expected rate tier (from schedule, not actual payments)
+    // Build chronological segments: rate tiers interleaved with Sondertilgungen
     const expectedRates = computeExpectedRates(config, payments);
-    // Group consecutive months with same expected rate
-    const rateTiers: { rate: number; count: number }[] = [];
-    for (const r of expectedRates) {
-      const rounded = Math.round(r);
-      if (rateTiers.length > 0 && rateTiers[rateTiers.length - 1].rate === rounded) {
-        rateTiers[rateTiers.length - 1].count++;
-      } else {
-        rateTiers.push({ rate: rounded, count: 1 });
-      }
+    const sondertilgungen = payments.filter(p => p.type === 'sondertilgung').sort((a, b) => a.date.localeCompare(b.date));
+
+    const start = new Date(config.startDate);
+    const startMonth = start.getMonth();
+    const startYear = start.getFullYear();
+    const monthIndexOf = (d: Date) => (d.getFullYear() - startYear) * 12 + (d.getMonth() - startMonth);
+
+    // Map Sondertilgungen to their month index
+    const sonderByMonth = new Map<number, number>();
+    for (const st of sondertilgungen) {
+      const idx = monthIndexOf(new Date(st.date));
+      sonderByMonth.set(idx, (sonderByMonth.get(idx) || 0) + st.amount);
     }
 
     const rateColors = [
@@ -84,17 +80,51 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       'hsl(var(--chart-3, 30 80% 55%))',
       'hsl(var(--chart-4, 280 65% 60%))',
     ];
+    let colorIdx = 0;
 
-    rateTiers.forEach((tier, i) => {
-      const totalForTier = tier.rate * tier.count;
-      segs.push({
-        label: `${tier.count}× ${formatEUR(tier.rate)}`,
-        amount: totalForTier,
-        color: rateColors[i % rateColors.length],
-      });
-    });
+    // Walk through months, grouping consecutive same-rate months, inserting Sondertilgungen between groups
+    let currentRate = -1;
+    let currentCount = 0;
 
-    // 4. Schlussrate (always shown, dashed red)
+    const flushRateTier = () => {
+      if (currentCount > 0 && currentRate > 0) {
+        segs.push({
+          label: `${currentCount}× ${formatEUR(currentRate)}`,
+          amount: currentRate * currentCount,
+          color: rateColors[colorIdx % rateColors.length],
+        });
+        colorIdx++;
+      }
+      currentCount = 0;
+    };
+
+    for (let i = 0; i < config.durationMonths; i++) {
+      const rounded = Math.round(expectedRates[i]);
+
+      // If rate changed, flush previous tier
+      if (rounded !== currentRate && currentCount > 0) {
+        flushRateTier();
+      }
+
+      // Check if a Sondertilgung happened this month — insert it before continuing
+      if (sonderByMonth.has(i)) {
+        // Flush current tier first
+        if (currentCount > 0) {
+          flushRateTier();
+        }
+        segs.push({
+          label: `Sondertilgung`,
+          amount: sonderByMonth.get(i)!,
+          color: 'hsl(var(--accent))',
+        });
+      }
+
+      currentRate = rounded;
+      currentCount++;
+    }
+    flushRateTier();
+
+    // Schlussrate (always shown, dashed red)
     if (config.balloonPayment > 0) {
       segs.push({
         label: 'Schlussrate',
@@ -104,7 +134,7 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       });
     }
 
-    // 5. Gebühren & Sonstiges
+    // Gebühren & Sonstiges
     const otherPayments = payments.filter(p => p.type === 'gebuehr' || p.type === 'sonstiges');
     const otherSum = otherPayments.reduce((s, p) => s + p.amount, 0);
     if (otherSum > 0) {
