@@ -6,7 +6,7 @@ interface KPICardsProps {
   config: FinanceConfig;
   totalPaid: number;
   remainingDebt: number;
-  vehicle: TeslaVehicleState;
+  vehicle: TeslaVehicleState | null;
   latestMarketPrice: MarketPriceEntry | null;
 }
 
@@ -76,14 +76,14 @@ export default function KPICards({ config, totalPaid, remainingDebt, vehicle, la
     {
       icon: <Gauge size={16} />,
       label: 'Kilometerstand',
-      value: `${formatNum(vehicle.odometerKm)} km`,
-      sub: `Sync: ${formatDateTime(vehicle.lastSyncAt)}`,
+      value: vehicle ? `${formatNum(vehicle.odometerKm)} km` : '—',
+      sub: vehicle?.lastSyncAt ? `Sync: ${formatDateTime(vehicle.lastSyncAt)}` : undefined,
     },
     {
       icon: <Car size={16} />,
       label: 'Fahrzeug',
-      value: `${vehicle.model}`,
-      sub: `${vehicle.trim} · ${vehicle.year}`,
+      value: vehicle ? `${vehicle.model}` : '—',
+      sub: vehicle ? `${vehicle.trim} · ${vehicle.year}` : undefined,
     },
     {
       icon: <TrendingUp size={16} />,
