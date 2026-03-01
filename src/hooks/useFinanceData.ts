@@ -33,6 +33,7 @@ export function useFinanceData() {
         durationMonths: data.duration_months,
         monthlyRate: Number(data.monthly_rate),
         interestRate: Number(data.interest_rate),
+        balloonPayment: Number((data as any).balloon_payment ?? 0),
         vehicleModel: data.vehicle_model,
         vehicleTrim: data.vehicle_trim,
         vehicleYear: data.vehicle_year,
@@ -92,9 +93,10 @@ export function useFinanceData() {
         purchase_price: c.purchasePrice, down_payment: c.downPayment,
         financed_amount: c.financedAmount, start_date: c.startDate,
         duration_months: c.durationMonths, monthly_rate: c.monthlyRate,
-        interest_rate: c.interestRate, vehicle_model: c.vehicleModel,
+        interest_rate: c.interestRate, balloon_payment: c.balloonPayment,
+        vehicle_model: c.vehicleModel,
         vehicle_trim: c.vehicleTrim, vehicle_year: c.vehicleYear, vin: c.vin,
-      }).eq('id', existing.id);
+      } as any).eq('id', existing.id);
     }
   }, []);
 

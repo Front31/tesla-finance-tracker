@@ -1,0 +1,1 @@
+ALTER TABLE public.finance_config ADD COLUMN balloon_payment numeric NOT NULL DEFAULT 0;
