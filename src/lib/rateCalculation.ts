@@ -83,7 +83,7 @@ export function generateMonthlyRates(config: FinanceConfig, payments: Payment[])
     const paidAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
 
     let overpayment = 0;
-    if (!isFuture && paidAmount > expectedAmount && expectedAmount > 0) {
+    if (paidAmount > expectedAmount && expectedAmount > 0) {
       overpayment = Math.round((paidAmount - expectedAmount) * 100) / 100;
       const remainingMonths = config.durationMonths - (i + 1);
       if (remainingMonths > 0) {
