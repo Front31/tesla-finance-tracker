@@ -68,10 +68,18 @@ function generateMonthlyRates(config: FinanceConfig, payments: Payment[]): Month
     const expectedAmount = Math.max(0, Math.round((config.monthlyRate - reductions[i]) * 100) / 100);
 
     // Find matching payments for this month (type 'rate')
+    // Match by note label first (handles early payments), then fall back to date
     const matchingPayments = payments.filter(p => {
       if (p.type !== 'rate') return false;
+      // Check if note matches this rate's label (e.g. "Rate 04/25")
+      if (p.note && p.note === label) return true;
+      // Fallback: match by payment date month/year (only if not claimed by another rate via note)
       const pDate = new Date(p.date);
-      return pDate.getMonth() === month && pDate.getFullYear() === year;
+      if (pDate.getMonth() === month && pDate.getFullYear() === year) {
+        // Only match by date if this payment doesn't have a note pointing to a different rate
+        if (!p.note || !p.note.startsWith('Rate ')) return true;
+      }
+      return false;
     });
 
     const paidAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
