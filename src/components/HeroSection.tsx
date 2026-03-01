@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import teslaImage from '@/assets/tesla-model3.png';
 import { FinanceConfig, Payment } from '@/types/finance';
+import { generateMonthlyRates } from '@/lib/rateCalculation';
 
 interface HeroSectionProps {
   totalPaid: number;
@@ -82,24 +83,13 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     ];
     let colorIdx = 0;
 
-    // Only count months that have been paid (have a matching 'rate' payment)
+    // Only count months that have been paid using shared rate calculation
     const paidMonths = new Set<number>();
-    const ratePayments = payments.filter(p => p.type === 'rate');
-    for (let i = 0; i < config.durationMonths; i++) {
-      const month = (startMonth + i) % 12;
-      const year = startYear + Math.floor((startMonth + i) / 12);
-      const label = `Rate ${String(month + 1).padStart(2, '0')}/${String(year).slice(-2)}`;
-      const hasMatch = ratePayments.some(p => {
-        // Match by note containing rate label (handles early payments)
-        if (p.note && p.note.includes(label)) return true;
-        // Fallback: match by date if no rate-note
-        const pDate = new Date(p.date);
-        if (pDate.getMonth() === month && pDate.getFullYear() === year) {
-          if (!p.note || !p.note.includes('Rate ')) return true;
-        }
-        return false;
-      });
-      if (hasMatch) paidMonths.add(i);
+    const { rates: allRates } = generateMonthlyRates(config, payments);
+    for (let i = 0; i < allRates.length; i++) {
+      if (allRates[i].isPaid || allRates[i].paidAmount > 0) {
+        paidMonths.add(i);
+      }
     }
 
     // Walk through paid months only, grouping consecutive same-rate months, inserting Sondertilgungen chronologically
