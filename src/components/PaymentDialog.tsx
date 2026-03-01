@@ -31,25 +31,28 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
     new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v);
 
   useEffect(() => {
+    if (!open) return;
     if (editPayment) {
       setDate(editPayment.date);
       setAmount(editPayment.amount.toString());
       setType(editPayment.type);
       setNote(editPayment.note || '');
       setSelectedOption('edit');
+    } else if (openRates.length > 0) {
+      const r = openRates[0];
+      setSelectedOption(r.key);
+      setDate(`${r.year}-${String(r.month + 1).padStart(2, '0')}-01`);
+      setAmount((r.expectedAmount - r.paidAmount).toFixed(2));
+      setNote(r.label);
+      setType('rate');
     } else {
+      setSelectedOption('sondertilgung');
+      setType('sondertilgung');
       setDate(new Date().toISOString().split('T')[0]);
       setAmount('');
-      setType('rate');
       setNote('');
-      // Auto-select first open rate
-      if (openRates.length > 0) {
-        handleOptionSelect(openRates[0].key);
-      } else {
-        setSelectedOption('sondertilgung');
-      }
     }
-  }, [editPayment, open]);
+  }, [editPayment, open, openRates]);
 
   const handleOptionSelect = (value: string) => {
     setSelectedOption(value);
