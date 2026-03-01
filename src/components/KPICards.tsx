@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Car, Calendar, CreditCard, TrendingUp, Gauge, MapPin } from 'lucide-react';
-import { FinanceConfig, TeslaVehicleState, MarketPriceEntry } from '@/types/finance';
+import { Car, Calendar, CreditCard, TrendingUp, Gauge, Clock } from 'lucide-react';
+import { FinanceConfig, TeslaVehicleState, MarketPriceEntry, Payment } from '@/types/finance';
 
 interface KPICardsProps {
   config: FinanceConfig;
@@ -8,6 +8,7 @@ interface KPICardsProps {
   remainingDebt: number;
   vehicle: TeslaVehicleState | null;
   latestMarketPrice: MarketPriceEntry | null;
+  openRatesCount: number;
 }
 
 const formatEUR = (v: number) =>
@@ -48,7 +49,7 @@ function KPIItem({ icon, label, value, sub, delay = 0 }: KPIItemProps) {
   );
 }
 
-export default function KPICards({ config, totalPaid, remainingDebt, vehicle, latestMarketPrice }: KPICardsProps) {
+export default function KPICards({ config, totalPaid, remainingDebt, vehicle, latestMarketPrice, openRatesCount }: KPICardsProps) {
   const kpis: KPIItemProps[] = [
     {
       icon: <CreditCard size={16} />,
@@ -93,10 +94,9 @@ export default function KPICards({ config, totalPaid, remainingDebt, vehicle, la
         : undefined,
     },
     {
-      icon: <MapPin size={16} />,
-      label: 'Vergleichsfahrzeuge',
-      value: latestMarketPrice ? `${latestMarketPrice.sampleSize}` : '—',
-      sub: latestMarketPrice ? `Stand: ${formatDateTime(latestMarketPrice.fetchedAt)}` : undefined,
+      icon: <Clock size={16} />,
+      label: 'Offene Raten',
+      value: `${openRatesCount}`,
     },
   ];
 
