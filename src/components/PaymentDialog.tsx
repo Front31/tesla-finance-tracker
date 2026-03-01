@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Payment, PAYMENT_TYPE_LABELS } from '@/types/finance';
+import { Payment, FinanceConfig, PAYMENT_TYPE_LABELS } from '@/types/finance';
+import { getOpenRates } from '@/components/MonthlyRateOverview';
 
 interface PaymentDialogProps {
   open: boolean;
@@ -13,13 +14,18 @@ interface PaymentDialogProps {
   onSave: (payment: Omit<Payment, 'id'>) => void;
   editPayment?: Payment | null;
   onUpdate?: (id: string, updates: Partial<Payment>) => void;
+  config: FinanceConfig;
+  payments: Payment[];
 }
 
-export default function PaymentDialog({ open, onOpenChange, onSave, editPayment, onUpdate }: PaymentDialogProps) {
+export default function PaymentDialog({ open, onOpenChange, onSave, editPayment, onUpdate, config, payments }: PaymentDialogProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<Payment['type']>('rate');
   const [note, setNote] = useState('');
+  const [selectedRate, setSelectedRate] = useState<string>('');
+
+  const openRates = useMemo(() => getOpenRates(config, payments), [config, payments]);
 
   useEffect(() => {
     if (editPayment) {
@@ -27,13 +33,34 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
       setAmount(editPayment.amount.toString());
       setType(editPayment.type);
       setNote(editPayment.note || '');
+      setSelectedRate('');
     } else {
       setDate(new Date().toISOString().split('T')[0]);
       setAmount('');
       setType('rate');
       setNote('');
+      // Auto-select newest open rate
+      if (openRates.length > 0) {
+        setSelectedRate(openRates[0].key);
+      } else {
+        setSelectedRate('');
+      }
     }
-  }, [editPayment, open]);
+  }, [editPayment, open, openRates]);
+
+  const handleRateSelect = (rateKey: string) => {
+    setSelectedRate(rateKey);
+    const rate = openRates.find(r => r.key === rateKey);
+    if (rate) {
+      // Set date to 1st of that month
+      setDate(`${rate.year}-${String(rate.month + 1).padStart(2, '0')}-01`);
+      // Pre-fill remaining amount
+      const remaining = rate.expectedAmount - rate.paidAmount;
+      setAmount(remaining.toFixed(2));
+      setNote(rate.label);
+      setType('rate');
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +84,25 @@ export default function PaymentDialog({ open, onOpenChange, onSave, editPayment,
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Open rates quick-select (only for new payments) */}
+          {!editPayment && openRates.length > 0 && (
+            <div className="space-y-2">
+              <Label>Offene Rate auswählen</Label>
+              <Select value={selectedRate} onValueChange={handleRateSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Rate wählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {openRates.map(r => (
+                    <SelectItem key={r.key} value={r.key}>
+                      {r.label} — noch {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(r.expectedAmount - r.paidAmount)} offen
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="date">Datum</Label>
             <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
