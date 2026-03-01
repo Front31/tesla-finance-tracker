@@ -32,6 +32,29 @@ function generateMonthlyRates(config: FinanceConfig, payments: Payment[]): Month
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
+  // Collect all Sondertilgungen and compute per-month rate reductions
+  const sondertilgungen = payments.filter(p => p.type === 'sondertilgung');
+
+  // For each month index, calculate the effective expected rate
+  // A Sondertilgung made in month index X reduces months X+1 .. end
+  const monthIndexOf = (m: number, y: number) => (y - startYear) * 12 + (m - startMonth);
+
+  // Build cumulative reduction per month
+  const reductions = new Array(config.durationMonths).fill(0);
+
+  for (const st of sondertilgungen) {
+    const pDate = new Date(st.date);
+    const stMonthIdx = monthIndexOf(pDate.getMonth(), pDate.getFullYear());
+    // Remaining months AFTER the Sondertilgung month
+    const firstAffected = stMonthIdx + 1;
+    const remainingCount = config.durationMonths - firstAffected;
+    if (remainingCount <= 0) continue;
+    const perMonth = st.amount / remainingCount;
+    for (let i = firstAffected; i < config.durationMonths; i++) {
+      reductions[i] += perMonth;
+    }
+  }
+
   const rates: MonthlyRate[] = [];
 
   for (let i = 0; i < config.durationMonths; i++) {
@@ -42,6 +65,8 @@ function generateMonthlyRates(config: FinanceConfig, payments: Payment[]): Month
 
     const isFuture = year > currentYear || (year === currentYear && month > currentMonth);
 
+    const expectedAmount = Math.max(0, Math.round((config.monthlyRate - reductions[i]) * 100) / 100);
+
     // Find matching payments for this month (type 'rate')
     const matchingPayments = payments.filter(p => {
       if (p.type !== 'rate') return false;
@@ -50,15 +75,15 @@ function generateMonthlyRates(config: FinanceConfig, payments: Payment[]): Month
     });
 
     const paidAmount = matchingPayments.reduce((sum, p) => sum + p.amount, 0);
-    const isPaid = paidAmount >= config.monthlyRate;
-    const isPartial = paidAmount > 0 && paidAmount < config.monthlyRate;
+    const isPaid = paidAmount >= expectedAmount;
+    const isPartial = paidAmount > 0 && paidAmount < expectedAmount;
 
     rates.push({
       key,
       label,
       month,
       year,
-      expectedAmount: config.monthlyRate,
+      expectedAmount,
       paidAmount,
       isPaid,
       isPartial,
