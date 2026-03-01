@@ -10,7 +10,7 @@ import PaymentHistory from '@/components/PaymentHistory';
 import FinanceSettings from '@/components/FinanceSettings';
 import MonthlyRateOverview from '@/components/MonthlyRateOverview';
 import FinancingOffers from '@/components/FinancingOffers';
-import ManualDataEntry from '@/components/ManualDataEntry';
+import CalculationOverview from '@/components/CalculationOverview';
 import { useFinanceData } from '@/hooks/useFinanceData';
 import { Payment } from '@/types/finance';
 import { getOpenRates } from '@/components/MonthlyRateOverview';
@@ -139,7 +139,7 @@ const Index = () => {
               <TabsTrigger value="raten">Ratenübersicht</TabsTrigger>
               <TabsTrigger value="historie">Zahlungen</TabsTrigger>
               <TabsTrigger value="angebote">Finanzierung</TabsTrigger>
-              <TabsTrigger value="manuell">Manuell</TabsTrigger>
+              <TabsTrigger value="berechnung">Berechnung</TabsTrigger>
             </TabsList>
 
             <TabsContent value="raten">
@@ -163,11 +163,14 @@ const Index = () => {
               />
             </TabsContent>
 
-            <TabsContent value="manuell">
-              <ManualDataEntry
-                onSaveOdometer={saveManualOdometer}
-                onSaveMarketPrice={saveManualMarketPrice}
-                currentOdometer={vehicle?.odometerKm}
+            <TabsContent value="berechnung">
+              <CalculationOverview
+                config={config}
+                payments={payments}
+                totalPaid={totalPaid}
+                remainingDebt={remainingDebt}
+                currentRateAmount={currentRateAmount}
+                paidRatesCount={paidRatesCount}
               />
             </TabsContent>
           </Tabs>
@@ -193,6 +196,9 @@ const Index = () => {
           onSyncTesla={syncTeslaVehicle}
           onRefreshMarketPrices={refreshMarketPrices}
           onReset={resetAllData}
+          onSaveOdometer={saveManualOdometer}
+          onSaveMarketPrice={saveManualMarketPrice}
+          currentOdometer={vehicle?.odometerKm}
         />
       </div>
     </div>
