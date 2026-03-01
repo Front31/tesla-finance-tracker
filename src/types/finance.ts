@@ -74,3 +74,18 @@ export const DEFAULT_FINANCE_CONFIG: FinanceConfig = {
   vehicleYear: 2024,
   vin: '',
 };
+
+export const EMPTY_FINANCE_CONFIG: FinanceConfig = {
+  purchasePrice: 0,
+  downPayment: 0,
+  financedAmount: 0,
+  startDate: '',
+  durationMonths: 0,
+  monthlyRate: 0,
+  interestRate: 0,
+  balloonPayment: 0,
+  vehicleModel: '',
+  vehicleTrim: '',
+  vehicleYear: 0,
+  vin: '',
+};
