@@ -82,8 +82,8 @@ export default function KPICards({ config, totalPaid, remainingDebt, vehicle, la
     {
       icon: <Car size={16} />,
       label: 'Fahrzeug',
-      value: vehicle?.model || config.vehicleModel || '—',
-      sub: `${vehicle?.trim || config.vehicleTrim} · ${vehicle?.year || config.vehicleYear}`,
+      value: config.vehicleModel || vehicle?.model || '—',
+      sub: `${config.vehicleTrim || vehicle?.trim || ''} · ${config.vehicleYear || vehicle?.year || ''}`,
     },
     {
       icon: <TrendingUp size={16} />,
