@@ -6,6 +6,7 @@ export interface FinanceConfig {
   durationMonths: number;
   monthlyRate: number;
   interestRate: number;
+  balloonPayment: number;
   vehicleModel: string;
   vehicleTrim: string;
   vehicleYear: number;
@@ -67,6 +68,7 @@ export const DEFAULT_FINANCE_CONFIG: FinanceConfig = {
   durationMonths: 48,
   monthlyRate: 450,
   interestRate: 3.99,
+  balloonPayment: 0,
   vehicleModel: 'Model 3',
   vehicleTrim: 'Long Range',
   vehicleYear: 2024,

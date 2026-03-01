@@ -113,13 +113,53 @@ const formatEUR = (v: number) =>
 export default function MonthlyRateOverview({ config, payments }: MonthlyRateOverviewProps) {
   const rates = useMemo(() => {
     const all = generateMonthlyRates(config, payments);
-    // Show only past & current months, newest first
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    return all
-      .filter(r => r.year < currentYear || (r.year === currentYear && r.month <= currentMonth))
-      .reverse();
+    // Next month
+    const nextMonth = (currentMonth + 1) % 12;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+
+    // Show past, current, and next month — newest first
+    const filtered = all.filter(r => {
+      const isPastOrCurrent = r.year < currentYear || (r.year === currentYear && r.month <= currentMonth);
+      const isNextMonth = r.year === nextYear && r.month === nextMonth;
+      return isPastOrCurrent || isNextMonth;
+    });
+
+    // Add Schlussrate as last entry if configured
+    if (config.balloonPayment > 0) {
+      const lastRate = all[all.length - 1];
+      if (lastRate) {
+        const schlussMonth = (lastRate.month + 1) % 12;
+        const schlussYear = lastRate.month === 11 ? lastRate.year + 1 : lastRate.year;
+        const schlussKey = `${schlussYear}-${String(schlussMonth + 1).padStart(2, '0')}-schluss`;
+        const schlussLabel = `Schlussrate ${String(schlussMonth + 1).padStart(2, '0')}/${String(schlussYear).slice(-2)}`;
+        const schlussIsFuture = schlussYear > currentYear || (schlussYear === currentYear && schlussMonth > currentMonth);
+
+        const schlussPayments = payments.filter(p => {
+          if (p.type !== 'sonstiges' && p.type !== 'rate') return false;
+          const pDate = new Date(p.date);
+          return pDate.getMonth() === schlussMonth && pDate.getFullYear() === schlussYear && p.note?.toLowerCase().includes('schluss');
+        });
+        const schlussPaid = schlussPayments.reduce((sum, p) => sum + p.amount, 0);
+
+        filtered.push({
+          key: schlussKey,
+          label: schlussLabel,
+          month: schlussMonth,
+          year: schlussYear,
+          expectedAmount: config.balloonPayment,
+          paidAmount: schlussPaid,
+          isPaid: schlussPaid >= config.balloonPayment,
+          isPartial: schlussPaid > 0 && schlussPaid < config.balloonPayment,
+          isFuture: schlussIsFuture,
+          matchingPayments: schlussPayments,
+        });
+      }
+    }
+
+    return filtered.reverse();
   }, [config, payments]);
 
   if (rates.length === 0) {
@@ -168,10 +208,10 @@ export default function MonthlyRateOverview({ config, payments }: MonthlyRateOve
                       {formatEUR(rate.paidAmount)} / {formatEUR(rate.expectedAmount)}
                     </span>
                     <Badge
-                      variant={rate.isPaid ? 'default' : rate.isPartial ? 'secondary' : 'destructive'}
+                      variant={rate.isPaid ? 'default' : rate.isPartial ? 'secondary' : rate.isFuture ? 'outline' : 'destructive'}
                       className="text-[10px] px-1.5 py-0"
                     >
-                      {rate.isPaid ? 'Bezahlt' : rate.isPartial ? 'Teilweise' : 'Offen'}
+                      {rate.isPaid ? 'Bezahlt' : rate.isPartial ? 'Teilweise' : rate.isFuture ? 'Ausstehend' : 'Offen'}
                     </Badge>
                   </div>
                 </div>

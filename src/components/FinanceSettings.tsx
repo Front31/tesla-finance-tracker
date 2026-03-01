@@ -122,6 +122,10 @@ export default function FinanceSettings({
               <Label>Zinssatz (%)</Label>
               <Input type="number" step="0.01" value={form.interestRate} onChange={e => update('interestRate', +e.target.value)} />
             </div>
+            <div className="space-y-2 col-span-2">
+              <Label>Schlussrate (EUR)</Label>
+              <Input type="number" step="0.01" value={form.balloonPayment} onChange={e => update('balloonPayment', +e.target.value)} placeholder="0" />
+            </div>
           </div>
 
           {/* Vehicle Data */}

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       finance_config: {
         Row: {
+          balloon_payment: number
           created_at: string
           down_payment: number
           duration_months: number
@@ -32,6 +33,7 @@ export type Database = {
           vin: string
         }
         Insert: {
+          balloon_payment?: number
           created_at?: string
           down_payment?: number
           duration_months?: number
@@ -48,6 +50,7 @@ export type Database = {
           vin?: string
         }
         Update: {
+          balloon_payment?: number
           created_at?: string
           down_payment?: number
           duration_months?: number
