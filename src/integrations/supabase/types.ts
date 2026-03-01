@@ -65,6 +65,54 @@ export type Database = {
         }
         Relationships: []
       }
+      financing_offers: {
+        Row: {
+          balloon_payment: number
+          bank_name: string
+          created_at: string
+          down_payment: number
+          duration_months: number
+          financed_amount: number
+          id: string
+          interest_rate: number
+          label: string
+          monthly_rate: number
+          notes: string | null
+          purchase_price: number
+          updated_at: string
+        }
+        Insert: {
+          balloon_payment?: number
+          bank_name?: string
+          created_at?: string
+          down_payment?: number
+          duration_months?: number
+          financed_amount?: number
+          id?: string
+          interest_rate?: number
+          label?: string
+          monthly_rate?: number
+          notes?: string | null
+          purchase_price?: number
+          updated_at?: string
+        }
+        Update: {
+          balloon_payment?: number
+          bank_name?: string
+          created_at?: string
+          down_payment?: number
+          duration_months?: number
+          financed_amount?: number
+          id?: string
+          interest_rate?: number
+          label?: string
+          monthly_rate?: number
+          notes?: string | null
+          purchase_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       market_price_daily: {
         Row: {
           avg_price_eur: number

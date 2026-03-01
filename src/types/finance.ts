@@ -38,6 +38,20 @@ export interface MarketPriceEntry {
   fetchedAt: string;
 }
 
+export interface FinancingOffer {
+  id: string;
+  label: string;
+  bankName: string;
+  purchasePrice: number;
+  downPayment: number;
+  financedAmount: number;
+  durationMonths: number;
+  monthlyRate: number;
+  interestRate: number;
+  balloonPayment: number;
+  notes: string;
+}
+
 export const PAYMENT_TYPE_LABELS: Record<Payment['type'], string> = {
   rate: 'Rate',
   sondertilgung: 'Sondertilgung',
