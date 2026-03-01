@@ -1,0 +1,1 @@
+ALTER TABLE public.market_price_daily ADD CONSTRAINT market_price_daily_date_unique UNIQUE (date);
