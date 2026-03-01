@@ -33,11 +33,10 @@ interface KPIItemProps {
 function KPIItem({ icon, label, value, sub, delay = 0 }: KPIItemProps) {
   return (
     <motion.div
-      className="glass-card p-4 flex flex-col gap-2"
+      className="glass-card p-4 flex flex-col gap-2 pointer-events-none select-none"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
     >
       <div className="flex items-center gap-2">
         <div className="text-muted-foreground">{icon}</div>
