@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { FinanceConfig, TeslaVehicleState } from '@/types/finance';
-import { Loader2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FinanceSettingsProps {
@@ -16,17 +18,20 @@ interface FinanceSettingsProps {
   onSaveTeslaToken?: (token: string) => Promise<void>;
   onSyncTesla?: () => Promise<any>;
   onRefreshMarketPrices?: () => Promise<any>;
+  onReset?: () => Promise<void>;
 }
 
 export default function FinanceSettings({
   open, onOpenChange, config, onSave,
-  vehicle, onSaveTeslaToken, onSyncTesla, onRefreshMarketPrices,
+  vehicle, onSaveTeslaToken, onSyncTesla, onRefreshMarketPrices, onReset,
 }: FinanceSettingsProps) {
   const [form, setForm] = useState<FinanceConfig>(config);
   const [teslaToken, setTeslaToken] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetChecked, setResetChecked] = useState(false);
+  const [resetting, setResetting] = useState(false);
   useEffect(() => {
     if (open) setForm(config);
   }, [open, config]);
@@ -198,6 +203,21 @@ export default function FinanceSettings({
             </Button>
           </div>
 
+          {/* Reset */}
+          {onReset && (
+            <div className="border-t border-destructive/30 pt-4">
+              <h3 className="text-sm font-semibold text-destructive mb-3">Gefahrenzone</h3>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => { setResetChecked(false); setResetConfirmOpen(true); }}
+              >
+                <Trash2 size={16} /> Alle Daten zurücksetzen
+              </Button>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Abbrechen
@@ -206,6 +226,54 @@ export default function FinanceSettings({
           </div>
         </form>
       </DialogContent>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alle Daten zurücksetzen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle Zahlungen, Einstellungen und Fahrzeugdaten werden unwiderruflich gelöscht.
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center gap-2 py-2">
+            <Checkbox
+              id="reset-confirm"
+              checked={resetChecked}
+              onCheckedChange={(v) => setResetChecked(v === true)}
+            />
+            <Label htmlFor="reset-confirm" className="text-sm cursor-pointer">
+              Ja, ich möchte alle Daten unwiderruflich löschen
+            </Label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!resetChecked || resetting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!onReset) return;
+                setResetting(true);
+                try {
+                  await onReset();
+                  toast.success('Alle Daten wurden zurückgesetzt');
+                  setResetConfirmOpen(false);
+                  onOpenChange(false);
+                } catch {
+                  toast.error('Fehler beim Zurücksetzen');
+                } finally {
+                  setResetting(false);
+                }
+              }}
+            >
+              {resetting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+              Endgültig löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

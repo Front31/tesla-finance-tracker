@@ -24,6 +24,7 @@ const Index = () => {
     loading, saveTeslaToken, syncTeslaVehicle, refreshMarketPrices,
     saveManualOdometer, saveManualMarketPrice,
     financingOffers, addFinancingOffer, updateFinancingOffer, deleteFinancingOffer,
+    resetAllData,
   } = useFinanceData();
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -191,6 +192,7 @@ const Index = () => {
           onSaveTeslaToken={saveTeslaToken}
           onSyncTesla={syncTeslaVehicle}
           onRefreshMarketPrices={refreshMarketPrices}
+          onReset={resetAllData}
         />
       </div>
     </div>
