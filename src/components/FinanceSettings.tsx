@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { FinanceConfig, TeslaVehicleState } from '@/types/finance';
-import { Loader2, CheckCircle, XCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, RefreshCw, Trash2, Save, Gauge, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FinanceSettingsProps {
@@ -19,11 +19,15 @@ interface FinanceSettingsProps {
   onSyncTesla?: () => Promise<any>;
   onRefreshMarketPrices?: () => Promise<any>;
   onReset?: () => Promise<void>;
+  onSaveOdometer?: (km: number) => Promise<void>;
+  onSaveMarketPrice?: (data: { avgPrice: number; minPrice: number; maxPrice: number; sampleSize: number }) => Promise<void>;
+  currentOdometer?: number;
 }
 
 export default function FinanceSettings({
   open, onOpenChange, config, onSave,
   vehicle, onSaveTeslaToken, onSyncTesla, onRefreshMarketPrices, onReset,
+  onSaveOdometer, onSaveMarketPrice, currentOdometer,
 }: FinanceSettingsProps) {
   const [form, setForm] = useState<FinanceConfig>(config);
   const [teslaToken, setTeslaToken] = useState('');
@@ -32,9 +36,20 @@ export default function FinanceSettings({
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resetChecked, setResetChecked] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [km, setKm] = useState('');
+  const [avgPrice, setAvgPrice] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sampleSize, setSampleSize] = useState('');
+  const [savingKm, setSavingKm] = useState(false);
+  const [savingPrice, setSavingPrice] = useState(false);
+
   useEffect(() => {
-    if (open) setForm(config);
-  }, [open, config]);
+    if (open) {
+      setForm(config);
+      setKm(currentOdometer?.toString() || '');
+    }
+  }, [open, config, currentOdometer]);
 
   const update = (key: keyof FinanceConfig, value: string | number) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -202,6 +217,70 @@ export default function FinanceSettings({
               Marktpreis aktualisieren
             </Button>
           </div>
+
+          {/* Manual Odometer */}
+          {onSaveOdometer && (
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Gauge size={16} className="text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Kilometerstand manuell</h3>
+              </div>
+              <div className="flex gap-2">
+                <Input type="number" value={km} onChange={e => setKm(e.target.value)} placeholder="z.B. 15000" className="flex-1" />
+                <Button type="button" variant="outline" size="sm" className="gap-2" disabled={savingKm || !km}
+                  onClick={async () => {
+                    setSavingKm(true);
+                    try { await onSaveOdometer(+km); toast.success(`Kilometerstand auf ${(+km).toLocaleString('de-DE')} km gesetzt`); }
+                    catch { toast.error('Fehler beim Speichern'); }
+                    finally { setSavingKm(false); }
+                  }}
+                >
+                  <Save size={14} /> Speichern
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Manual Market Price */}
+          {onSaveMarketPrice && (
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp size={16} className="text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Marktpreis manuell</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Ø Preis (EUR) *</Label>
+                  <Input type="number" value={avgPrice} onChange={e => setAvgPrice(e.target.value)} placeholder="z.B. 35000" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Min. Preis (EUR)</Label>
+                  <Input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="z.B. 30000" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Max. Preis (EUR)</Label>
+                  <Input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="z.B. 40000" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Anzahl Vergleichsfahrzeuge</Label>
+                  <Input type="number" value={sampleSize} onChange={e => setSampleSize(e.target.value)} placeholder="z.B. 50" />
+                </div>
+              </div>
+              <Button type="button" variant="outline" size="sm" className="w-full gap-2 mt-3" disabled={savingPrice || !avgPrice}
+                onClick={async () => {
+                  setSavingPrice(true);
+                  try {
+                    await onSaveMarketPrice({ avgPrice: +avgPrice, minPrice: +minPrice || +avgPrice, maxPrice: +maxPrice || +avgPrice, sampleSize: +sampleSize || 0 });
+                    toast.success('Marktpreis gespeichert');
+                    setAvgPrice(''); setMinPrice(''); setMaxPrice(''); setSampleSize('');
+                  } catch { toast.error('Fehler beim Speichern'); }
+                  finally { setSavingPrice(false); }
+                }}
+              >
+                <Save size={14} /> Marktpreis speichern
+              </Button>
+            </div>
+          )}
 
           {/* Reset */}
           {onReset && (
