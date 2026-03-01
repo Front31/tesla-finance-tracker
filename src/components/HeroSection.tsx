@@ -85,12 +85,21 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     // Only count months that have been paid (have a matching 'rate' payment)
     const paidMonths = new Set<number>();
     const ratePayments = payments.filter(p => p.type === 'rate');
-    for (const p of ratePayments) {
-      const pDate = new Date(p.date);
-      const idx = monthIndexOf(pDate);
-      if (idx >= 0 && idx < config.durationMonths) {
-        paidMonths.add(idx);
-      }
+    for (let i = 0; i < config.durationMonths; i++) {
+      const month = (startMonth + i) % 12;
+      const year = startYear + Math.floor((startMonth + i) / 12);
+      const label = `Rate ${String(month + 1).padStart(2, '0')}/${String(year).slice(-2)}`;
+      const hasMatch = ratePayments.some(p => {
+        // Match by note containing rate label (handles early payments)
+        if (p.note && p.note.includes(label)) return true;
+        // Fallback: match by date if no rate-note
+        const pDate = new Date(p.date);
+        if (pDate.getMonth() === month && pDate.getFullYear() === year) {
+          if (!p.note || !p.note.includes('Rate ')) return true;
+        }
+        return false;
+      });
+      if (hasMatch) paidMonths.add(i);
     }
 
     // Walk through paid months only, grouping consecutive same-rate months, inserting Sondertilgungen chronologically
