@@ -82,7 +82,18 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     ];
     let colorIdx = 0;
 
-    // Walk through months, grouping consecutive same-rate months, inserting Sondertilgungen between groups
+    // Only count months that have been paid (have a matching 'rate' payment)
+    const paidMonths = new Set<number>();
+    const ratePayments = payments.filter(p => p.type === 'rate');
+    for (const p of ratePayments) {
+      const pDate = new Date(p.date);
+      const idx = monthIndexOf(pDate);
+      if (idx >= 0 && idx < config.durationMonths) {
+        paidMonths.add(idx);
+      }
+    }
+
+    // Walk through paid months only, grouping consecutive same-rate months, inserting Sondertilgungen chronologically
     let currentRate = -1;
     let currentCount = 0;
 
@@ -99,16 +110,8 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     };
 
     for (let i = 0; i < config.durationMonths; i++) {
-      const rounded = Math.round(expectedRates[i]);
-
-      // If rate changed, flush previous tier
-      if (rounded !== currentRate && currentCount > 0) {
-        flushRateTier();
-      }
-
-      // Check if a Sondertilgung happened this month — insert it before continuing
+      // Insert Sondertilgung at its chronological position
       if (sonderByMonth.has(i)) {
-        // Flush current tier first
         if (currentCount > 0) {
           flushRateTier();
         }
@@ -119,6 +122,13 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
         });
       }
 
+      // Only include this month if it was actually paid
+      if (!paidMonths.has(i)) continue;
+
+      const rounded = Math.round(expectedRates[i]);
+      if (rounded !== currentRate && currentCount > 0) {
+        flushRateTier();
+      }
       currentRate = rounded;
       currentCount++;
     }
@@ -144,8 +154,8 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
     return segs;
   }, [config, payments]);
 
-  // Total planned = all segments
-  const plannedTotal = segments.reduce((s, seg) => s + seg.amount, 0);
+  // Use totalPrice as base for proportional widths
+  const barBase = totalPrice;
 
   return (
     <div className="relative flex flex-col items-center gap-6 py-8 md:py-12">
@@ -185,8 +195,7 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
         {/* Segmented progress bar */}
         <div className="relative h-3 rounded-full bg-secondary overflow-hidden flex">
           {segments.map((seg, i) => {
-            const base = plannedTotal > 0 ? plannedTotal : totalPrice;
-            const widthPercent = base > 0 ? (seg.amount / base) * 100 : 0;
+            const widthPercent = barBase > 0 ? (seg.amount / barBase) * 100 : 0;
             if (seg.dashed) {
               return (
                 <motion.div
