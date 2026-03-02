@@ -14,7 +14,7 @@ interface HeroSectionProps {
 }
 
 const formatEUR = (v: number) =>
-  new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v);
 
 interface PaymentSegment {
   label: string;
