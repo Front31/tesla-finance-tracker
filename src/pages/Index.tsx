@@ -31,7 +31,14 @@ const Index = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
-  const openRatesCount = useMemo(() => getOpenRates(config, payments).length, [config, payments]);
+  const openRatesCount = useMemo(() => {
+    const { rates } = generateMonthlyRates(config, payments);
+    const now = new Date();
+    return rates.filter(r => {
+      const rateDate = new Date(r.year, r.month, 1);
+      return rateDate <= now && !r.isPaid;
+    }).length;
+  }, [config, payments]);
 
   const { paidRatesCount, currentRateAmount } = useMemo(() => {
     const { rates } = generateMonthlyRates(config, payments);
