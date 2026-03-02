@@ -104,7 +104,7 @@ export default function HeroSection({ totalPaid, totalPrice, progressPercent, re
       if (!paidMonths.has(i)) continue;
 
       // Use expected amount from shared calculation (includes overpayment reductions)
-      const rounded = Math.round(allRates[i].expectedAmount);
+      const rounded = Math.round(allRates[i].expectedAmount * 100) / 100;
       if (rounded !== currentRate && currentCount > 0) {
         flushRateTier();
       }
